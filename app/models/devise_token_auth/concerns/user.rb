@@ -200,7 +200,7 @@ module DeviseTokenAuth::Concerns::User
     
     client_id ||= 'default'
 
-    if !DeviseTokenAuth.change_headers_on_each_request && self.tokens[client_id].nil?
+    if (!DeviseTokenAuth.change_headers_on_each_request && self.tokens[client_id].nil?) || !token
       create_new_auth_token(client_id)
     else
       # client may use expiry to prevent validation request if expired
