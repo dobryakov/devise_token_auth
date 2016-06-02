@@ -77,7 +77,7 @@ module DeviseTokenAuth::Concerns::SetUserByToken
       auth_header = @resource.build_auth_header(@token, @client_id)
 
       # update the response header
-      response.headers.merge!(auth_header)
+      response.headers.merge!(auth_header) unless response.headers.frozen?
 
     else
 
