@@ -110,7 +110,7 @@ module DeviseTokenAuth::Concerns::User
   def valid_token?(token, client_id='default')
     client_id ||= 'default'
 
-    return false unless self.tokens[client_id]
+    return false unless self.tokens.where(client_id: client_id).count < 1
 
     return true if token_is_current?(token, client_id)
     return true if token_can_be_reused?(token, client_id)
@@ -129,8 +129,9 @@ module DeviseTokenAuth::Concerns::User
 
   def token_is_current?(token, client_id)
     # ghetto HashWithIndifferentAccess
-    expiry     = self.tokens[client_id]['expiry'] || self.tokens[client_id][:expiry]
-    token_hash = self.tokens[client_id]['token'] || self.tokens[client_id][:token]
+    t = self.tokens.where(client_id: client_id).last
+    expiry     = t.try(:expiry)
+    token_hash = t.try(:token)
 
     return true if (
       # ensure that expiry and token are set
@@ -148,8 +149,9 @@ module DeviseTokenAuth::Concerns::User
   # allow batch requests to use the previous token
   def token_can_be_reused?(token, client_id)
     # ghetto HashWithIndifferentAccess
-    updated_at = self.tokens[client_id]['updated_at'] || self.tokens[client_id][:updated_at]
-    last_token = self.tokens[client_id]['last_token'] || self.tokens[client_id][:last_token]
+    t = self.tokens.where(client_id: client_id).last
+    updated_at = t.try(:updated_at)
+    last_token = t.try(:last_token)
 
 
     return true if (
@@ -173,24 +175,23 @@ module DeviseTokenAuth::Concerns::User
     token_hash   = ::BCrypt::Password.create(token)
     expiry       = (Time.now + DeviseTokenAuth.token_lifespan).to_i
 
-    if self.tokens[client_id] and self.tokens[client_id]['token']
-      last_token = self.tokens[client_id]['token']
+    t = self.tokens.where(client_id: client_id).last
+    if t.present? and t.try(:token).present?
+      last_token = t.token
     end
 
-    self.tokens[client_id] = {
+    self.tokens.where(client_id: client_id).first_or_create.update({
       token:      token_hash,
       expiry:     expiry,
-      last_token: last_token,
-      updated_at: Time.now
-    }
+      last_token: last_token
+    })
 
     max_clients = DeviseTokenAuth.max_number_of_devices
-    while self.tokens.keys.length > 0 and max_clients < self.tokens.keys.length
-      oldest_token = self.tokens.min_by { |cid, v| v[:expiry] || v["expiry"] }
-      self.tokens.delete(oldest_token.first)
+    while self.tokens.count > 0 and max_clients < self.tokens.count
+      self.tokens.order('expiry ASC').first.destroy
     end
 
-    self.save!
+    #self.save!
 
     return build_auth_header(token, client_id)
   end
@@ -200,12 +201,12 @@ module DeviseTokenAuth::Concerns::User
     
     client_id ||= 'default'
 
-    if (!DeviseTokenAuth.change_headers_on_each_request && self.tokens[client_id].nil?) || !token
+    if (!DeviseTokenAuth.change_headers_on_each_request && self.tokens.where(client_id: client_id).last.nil?) || !token
       create_new_auth_token(client_id)
     else
       # client may use expiry to prevent validation request if expired
       # must be cast as string or headers will break
-      expiry = self.tokens[client_id]['expiry'] || self.tokens[client_id][:expiry]
+      expiry = self.tokens.where(client_id: client_id).last.try(:expiry)
       return {
         "access-token" => token,
         "token-type"   => "Bearer",
@@ -220,15 +221,15 @@ module DeviseTokenAuth::Concerns::User
 
   def build_auth_url(base_url, args)
     args[:uid]    = self.uid
-    args[:expiry] = self.tokens[args[:client_id]]['expiry']
+    args[:expiry] = self.tokens.where(client_id: args[:client_id]).last.try(:expiry)
 
     DeviseTokenAuth::Url.generate(base_url, args)
   end
 
 
   def extend_batch_buffer(token, client_id)
-    self.tokens[client_id]['updated_at'] = Time.now
-    self.save!
+    self.tokens.where(client_id: client_id).last.try(:touch)
+    #self.save!
 
     return build_auth_header(token, client_id)
   end
@@ -254,7 +255,7 @@ module DeviseTokenAuth::Concerns::User
   end
 
   def set_empty_token_hash
-    self.tokens ||= {} if has_attribute?(:tokens)
+    #self.tokens ||= {} if has_attribute?(:tokens)
   end
 
   def sync_uid
@@ -262,22 +263,18 @@ module DeviseTokenAuth::Concerns::User
   end
 
   def destroy_expired_tokens
-    if self.tokens
-      self.tokens.delete_if do |cid, v|
-        expiry = v[:expiry] || v["expiry"]
-        DateTime.strptime(expiry.to_s, '%s') < Time.now
-      end
-    end
+    self.tokens.where('expire < ?', Time.now.to_i).destroy_all
   end
 
   def remove_tokens_after_password_reset
-    there_is_more_than_one_token = self.tokens && self.tokens.keys.length > 1
+    there_is_more_than_one_token = self.tokens.count > 1
     should_remove_old_tokens = DeviseTokenAuth.remove_tokens_after_password_reset &&
                                encrypted_password_changed? && there_is_more_than_one_token
 
     if should_remove_old_tokens
-      latest_token = self.tokens.max_by { |cid, v| v[:expiry] || v["expiry"] }
-      self.tokens = {latest_token.first => latest_token.last}
+      # @TODO can't understand what is this?
+      #latest_token = self.tokens.max_by { |cid, v| v[:expiry] || v["expiry"] }
+      #self.tokens = {latest_token.first => latest_token.last}
     end
   end
 
