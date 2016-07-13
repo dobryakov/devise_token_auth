@@ -15,7 +15,7 @@ module DeviseTokenAuth
           expiry: expiry
         })
 
-        #@resource.save!
+        @resource.reload
 
         yield if block_given?
 

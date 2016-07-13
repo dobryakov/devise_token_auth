@@ -93,7 +93,7 @@ module DeviseTokenAuth
         # allow user to change password once without current_password
         @resource.allow_password_change = true;
 
-        #@resource.save!
+        @resource.reload
         yield if block_given?
 
         redirect_to(@resource.build_auth_url(params[:redirect_url], {

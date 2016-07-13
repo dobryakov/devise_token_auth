@@ -58,7 +58,7 @@ module DeviseTokenAuth
               expiry: (Time.now + DeviseTokenAuth.token_lifespan).to_i
             })
 
-            #@resource.save!
+            @resource.reload
 
             update_auth_header
           end

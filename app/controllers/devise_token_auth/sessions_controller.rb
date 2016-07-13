@@ -38,7 +38,7 @@ module DeviseTokenAuth
           token: BCrypt::Password.create(@token),
           expiry: (Time.now + DeviseTokenAuth.token_lifespan).to_i
         })
-        #@resource.save
+        @resource.reload
 
         sign_in(:user, @resource, store: false, bypass: false)
 
@@ -60,7 +60,7 @@ module DeviseTokenAuth
 
       if user and client_id and user.tokens.where(client_id: client_id).last.present?
         user.tokens.where(client_id: client_id).last.destroy
-        #user.save!
+        user.reload
 
         yield if block_given?
 

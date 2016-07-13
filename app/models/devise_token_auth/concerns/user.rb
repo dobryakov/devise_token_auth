@@ -191,7 +191,7 @@ module DeviseTokenAuth::Concerns::User
       self.tokens.order('expiry ASC').first.destroy
     end
 
-    #self.save!
+    self.reload
 
     return build_auth_header(token, client_id)
   end
