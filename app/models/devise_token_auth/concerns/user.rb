@@ -263,7 +263,7 @@ module DeviseTokenAuth::Concerns::User
   end
 
   def destroy_expired_tokens
-    self.tokens.where('expire < ?', Time.now.to_i).destroy_all
+    self.tokens.where('expiry < ?', Time.now.to_i).destroy_all
   end
 
   def remove_tokens_after_password_reset
