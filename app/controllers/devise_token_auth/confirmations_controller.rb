@@ -10,12 +10,12 @@ module DeviseTokenAuth
         token_hash = BCrypt::Password.create(token)
         expiry     = (Time.now + DeviseTokenAuth.token_lifespan).to_i
 
-        @resource.tokens[client_id] = {
+        @resource.tokens.where(client_id: client_id).first_or_create.update({
           token:  token_hash,
           expiry: expiry
-        }
+        })
 
-        @resource.save!
+        #@resource.save!
 
         yield if block_given?
 

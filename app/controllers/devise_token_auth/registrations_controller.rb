@@ -53,12 +53,12 @@ module DeviseTokenAuth
             @client_id = SecureRandom.urlsafe_base64(nil, false)
             @token     = SecureRandom.urlsafe_base64(nil, false)
 
-            @resource.tokens[@client_id] = {
+            @resource.tokens.where(client_id: @client_id).first_or_create.update({
               token: BCrypt::Password.create(@token),
               expiry: (Time.now + DeviseTokenAuth.token_lifespan).to_i
-            }
+            })
 
-            @resource.save!
+            #@resource.save!
 
             update_auth_header
           end

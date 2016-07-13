@@ -82,10 +82,10 @@ module DeviseTokenAuth
         token_hash = BCrypt::Password.create(token)
         expiry     = (Time.now + DeviseTokenAuth.token_lifespan).to_i
 
-        @resource.tokens[client_id] = {
+        @resource.tokens.where(client_id: client_id).first_or_create.update({
           token:  token_hash,
           expiry: expiry
-        }
+        })
 
         # ensure that user is confirmed
         @resource.skip_confirmation! if @resource.devise_modules.include?(:confirmable) && !@resource.confirmed_at
@@ -93,7 +93,7 @@ module DeviseTokenAuth
         # allow user to change password once without current_password
         @resource.allow_password_change = true;
 
-        @resource.save!
+        #@resource.save!
         yield if block_given?
 
         redirect_to(@resource.build_auth_url(params[:redirect_url], {

@@ -34,11 +34,11 @@ module DeviseTokenAuth
         @client_id = SecureRandom.urlsafe_base64(nil, false)
         @token     = SecureRandom.urlsafe_base64(nil, false)
 
-        @resource.tokens[@client_id] = {
+        @resource.tokens.where(client_id: @client_id).first_or_create.update({
           token: BCrypt::Password.create(@token),
           expiry: (Time.now + DeviseTokenAuth.token_lifespan).to_i
-        }
-        @resource.save
+        })
+        #@resource.save
 
         sign_in(:user, @resource, store: false, bypass: false)
 
@@ -58,9 +58,9 @@ module DeviseTokenAuth
       client_id = remove_instance_variable(:@client_id) if @client_id
       remove_instance_variable(:@token) if @token
 
-      if user and client_id and user.tokens[client_id]
-        user.tokens.delete(client_id)
-        user.save!
+      if user and client_id and user.tokens.where(client_id: client_id).last.present?
+        user.tokens.where(client_id: client_id).last.destroy
+        #user.save!
 
         yield if block_given?
 

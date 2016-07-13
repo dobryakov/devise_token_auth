@@ -35,7 +35,7 @@ module DeviseTokenAuth
 
       sign_in(:user, @resource, store: false, bypass: false)
 
-      @resource.save!
+      #@resource.save!
 
       yield if block_given?
 
@@ -177,10 +177,10 @@ module DeviseTokenAuth
     end
 
     def set_token_on_resource
-      @resource.tokens[@client_id] = {
+      @resource.tokens.where(client_id: @client_id).first_or_create.update({
         token: BCrypt::Password.create(@token),
         expiry: @expiry
-      }
+      })
     end
 
     def render_data(message, data)
