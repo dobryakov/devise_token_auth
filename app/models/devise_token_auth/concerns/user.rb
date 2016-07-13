@@ -110,7 +110,7 @@ module DeviseTokenAuth::Concerns::User
   def valid_token?(token, client_id='default')
     client_id ||= 'default'
 
-    return false unless self.tokens.where(client_id: client_id).count < 1
+    return false if self.tokens.where(client_id: client_id).count < 1
 
     return true if token_is_current?(token, client_id)
     return true if token_can_be_reused?(token, client_id)
