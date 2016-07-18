@@ -54,6 +54,7 @@ module DeviseTokenAuth::Concerns::SetUserByToken
 
     # mitigate timing attacks by finding by uid instead of auth token
     user = uid && rc.find_by_uid(uid)
+    @current_user = user
 
     if user && user.valid_token?(@token, @client_id)
       sign_in(:user, user, store: false, bypass: true)
@@ -61,6 +62,7 @@ module DeviseTokenAuth::Concerns::SetUserByToken
     else
       # zero all values previously set values
       @client_id = nil
+      @current_user = nil
       return @resource = nil
     end
   end
