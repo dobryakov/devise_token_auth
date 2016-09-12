@@ -32,9 +32,10 @@ module DeviseTokenAuth
       if @resource and valid_params?(field, q_value) and @resource.valid_password?(resource_params[:password]) and (!@resource.respond_to?(:active_for_authentication?) or @resource.active_for_authentication?)
         # create client id
         @client_id = SecureRandom.urlsafe_base64(nil, false)
+        @device_id = request.headers['device-id'] || params['device_id']
         @token     = SecureRandom.urlsafe_base64(nil, false)
 
-        @resource.tokens.where(client_id: @client_id).first_or_create.update({
+        @resource.tokens.where(client_id: @client_id, device_id: @device_id).first_or_create.update({
           token: BCrypt::Password.create(@token),
           expiry: (Time.now + DeviseTokenAuth.token_lifespan).to_i
         })
