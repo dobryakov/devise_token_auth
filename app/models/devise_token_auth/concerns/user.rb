@@ -208,11 +208,11 @@ module DeviseTokenAuth::Concerns::User
       # must be cast as string or headers will break
       expiry = self.tokens.where(client_id: client_id).last.try(:expiry)
       return {
-        "access-token" => token,
+        "access-token" => token.to_s,
         "token-type"   => "Bearer",
-        "client"       => client_id,
-        "expiry"       => expiry.to_s,
-        "uid"          => self.uid
+        "client"       => client_id.to_s,
+        "expiry"       => (expiry || 0).to_s,
+        "uid"          => self.uid.to_s
       }
     end
 
