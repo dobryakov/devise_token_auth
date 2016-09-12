@@ -32,7 +32,7 @@ module DeviseTokenAuth
       if @resource and valid_params?(field, q_value) and @resource.valid_password?(resource_params[:password]) and (!@resource.respond_to?(:active_for_authentication?) or @resource.active_for_authentication?)
         # create client id
         @client_id = SecureRandom.urlsafe_base64(nil, false)
-        @device_id = request.headers['device-id'] || params['device_id']
+        @device_id = request.headers['device-id'] || params['device_id'] || params['device-id']
         @token     = SecureRandom.urlsafe_base64(nil, false)
 
         @resource.tokens.where(client_id: @client_id, device_id: @device_id).first_or_create.update({
